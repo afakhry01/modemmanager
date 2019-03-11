@@ -34,7 +34,6 @@
 #include "mm-iface-modem-location.h"
 #include "mm-iface-modem-firmware.h"
 #include "mm-broadband-modem-dell-dw5821e.h"
-#include "mm-shared-qmi.h"
 
 static void iface_modem_location_init (MMIfaceModemLocation *iface);
 static void iface_modem_firmware_init (MMIfaceModemFirmware *iface);
@@ -67,73 +66,21 @@ firmware_load_update_settings_finish (MMIfaceModemFirmware  *self,
 }
 
 static void
-dell_get_firmware_version_ready (QmiClientDms *client,
-                                 GAsyncResult *res,
-                                 GTask        *task)
-{
-    QmiMessageDmsDellGetFirmwareVersionOutput *output;
-    GError                                    *error = NULL;
-    MMFirmwareUpdateSettings                  *update_settings = NULL;
-    const gchar                               *str;
-
-    output = qmi_client_dms_dell_get_firmware_version_finish (client, res, &error);
-    if (!output || !qmi_message_dms_dell_get_firmware_version_output_get_result (output, &error))
-        goto out;
-
-    /* Create update settings now */
-    update_settings = mm_firmware_update_settings_new (MM_MODEM_FIRMWARE_UPDATE_METHOD_FASTBOOT |
-                                                       MM_MODEM_FIRMWARE_UPDATE_METHOD_QMI_PDC);
-    mm_firmware_update_settings_set_fastboot_at (update_settings, "AT^FASTBOOT");
-
-    qmi_message_dms_dell_get_firmware_version_output_get_version (output, &str, NULL);
-    mm_firmware_update_settings_set_version (update_settings, str);
-
- out:
-    if (error)
-        g_task_return_error (task, error);
-    else {
-        g_assert (update_settings);
-        g_task_return_pointer (task, update_settings, g_object_unref);
-    }
-    g_object_unref (task);
-    if (output)
-        qmi_message_dms_dell_get_firmware_version_output_unref (output);
-}
-
-static void
 firmware_load_update_settings (MMIfaceModemFirmware *self,
                                GAsyncReadyCallback   callback,
                                gpointer              user_data)
 {
-    GTask                                    *task;
-    QmiMessageDmsDellGetFirmwareVersionInput *input = NULL;
-    QmiClient                                *client = NULL;
-
+    MMFirmwareUpdateSettings *update_settings;
+    GTask                    *task;
 
     task = g_task_new (self, NULL, callback, user_data);
 
-    client = mm_shared_qmi_peek_client (MM_SHARED_QMI (self),
-                                        QMI_SERVICE_DMS,
-                                        MM_PORT_QMI_FLAG_DEFAULT,
-                                        NULL);
-    if (!client) {
-        g_task_return_new_error (task, MM_CORE_ERROR, MM_CORE_ERROR_FAILED,
-                                 "Unable to load DW5821e version info: no QMI DMS client available");
-        g_object_unref (task);
-        return;
-    }
+    update_settings = mm_firmware_update_settings_new (MM_MODEM_FIRMWARE_UPDATE_METHOD_FASTBOOT |
+                                                       MM_MODEM_FIRMWARE_UPDATE_METHOD_QMI_PDC);
+    mm_firmware_update_settings_set_fastboot_at (update_settings, "AT^FASTBOOT");
 
-    input = qmi_message_dms_dell_get_firmware_version_input_new ();
-    qmi_message_dms_dell_get_firmware_version_input_set_version_type (input,
-                                                                      QMI_DMS_DELL_FIRMWARE_VERSION_TYPE_FIRMWARE_MCFG,
-                                                                      NULL);
-    qmi_client_dms_dell_get_firmware_version (QMI_CLIENT_DMS (client),
-                                              input,
-                                              10,
-                                              NULL,
-                                              (GAsyncReadyCallback)dell_get_firmware_version_ready,
-                                              task);
-    qmi_message_dms_dell_get_firmware_version_input_unref (input);
+    g_task_return_pointer (task, update_settings, g_object_unref);
+    g_object_unref (task);
 }
 
 /*****************************************************************************/

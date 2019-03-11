@@ -114,6 +114,5 @@ typedef enum { /*< underscore_name=mm_telit_csim_lock_state >*/
     CSIM_LOCK_STATE_LOCKED,
 } MMTelitCsimLockState;
 
-GArray *mm_telit_build_modes_list (void);
 
 #endif  /* MM_MODEM_HELPERS_TELIT_H */
