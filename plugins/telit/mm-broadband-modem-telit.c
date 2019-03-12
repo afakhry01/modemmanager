@@ -44,7 +44,7 @@ G_DEFINE_TYPE_EXTENDED (MMBroadbandModemTelit, mm_broadband_modem_telit, MM_TYPE
                         G_IMPLEMENT_INTERFACE (MM_TYPE_IFACE_MODEM, iface_modem_init)
                         G_IMPLEMENT_INTERFACE (MM_TYPE_IFACE_MODEM_3GPP, iface_modem_3gpp_init));
 
-#define CSIM_UNLOCK_MAX_TIMEOUT 3
+#define CSIM_UNLOCK_MAX_TIMEOUT 15
 
 typedef enum {
     FEATURE_SUPPORT_UNKNOWN,
@@ -91,7 +91,7 @@ modem_after_sim_unlock (MMIfaceModem *self,
 
     /* A short delay is necessary with some SIMs when
     they have just been unlocked. Using 1 second as secure margin. */
-    g_timeout_add_seconds (1, (GSourceFunc) after_sim_unlock_ready, task);
+    g_timeout_add_seconds (5, (GSourceFunc) after_sim_unlock_ready, task);
 }
 
 /*****************************************************************************/
